@@ -19,7 +19,7 @@ bootmain(void)
 {
   struct elfhdr *elf;
   struct proghdr *ph, *eph;
-  void (*entry)(void);
+  // void (*entry)(void);
   uchar* pa;
 
   elf = (struct elfhdr*)0x10000;  // scratch space
@@ -43,8 +43,14 @@ bootmain(void)
 
   // Call the entry point from the ELF header.
   // Does not return!
-  entry = (void(*)(void))(elf->entry);
-  entry();
+//  entry = (void(*)(void))(elf->entry);
+  //entry();
+  
+  asm  (
+	"jmp *%[location]\n"
+	:
+	: [location] "r" (elf->entry)
+  );
 }
 
 void

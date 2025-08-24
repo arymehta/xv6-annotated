@@ -4,6 +4,16 @@
 #include "user.h"
 #include "x86.h"
 
+void strcat(char *s1, char *s2)
+{
+	char *ptr1 = s1;
+	char *ptr2 = s2;
+	while(*ptr1) ptr1++;
+
+	while((*ptr1++ = *ptr2++));
+	
+	return;
+}
 char*
 strcpy(char *s, const char *t)
 {
