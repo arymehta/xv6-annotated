@@ -442,3 +442,74 @@ sys_pipe(void)
   fd[1] = fd1;
   return 0;
 }
+
+
+
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
+
+#define EBADF  -2
+#define EINVAL -3
+#define EOVERFLOW -4
+#define ESPIPE -5
+
+int sys_lseek(void)
+{
+	int fd;
+	int offset;
+	int whence;
+
+	if(argint(0, &fd) == -1) return -1;
+	if(argint(1, &offset) == -1) return -1;
+	if(argint(2, &whence) == -1) return -1;
+	
+
+	if(fd == -1 || fd >= NOFILE){
+		cprintf("lseek: bad file descriptor!\n");
+		return EBADF;
+	}
+	
+	struct file *f = myproc()->ofile[fd];	
+	if(!f) return -1;
+	if(f->type == FD_PIPE) {
+		cprintf("lseek: Cannot lseek pipe inode!!\n");
+		return ESPIPE;
+	}
+	if (f->type == FD_NONE) {
+		cprintf("lseek: FD_NONE\n");
+		return -1;
+	}
+
+	
+	int newOffset;
+	int currOffset = f->off;
+	switch(whence)
+	{
+		case SEEK_SET:
+			newOffset = 0 + offset;
+			break;
+		case SEEK_CUR:
+			newOffset = currOffset + offset;
+			break;
+		case SEEK_END:
+			newOffset = f->ip->size + offset;
+			break;
+		default:
+			cprintf("lseek: Bad whence value!\n");
+			return EINVAL;
+	}
+	
+	if(newOffset < 0) {
+		cprintf("Negative Offset!\n");
+		return EINVAL;
+	}
+	
+	else if(newOffset > f->ip->size) {
+		cprintf("lseek: Offset exceeds file size, assignment specified not to handle\n");
+		return EINVAL;
+	}
+
+	else f->off = newOffset;
+	return newOffset;
+}
