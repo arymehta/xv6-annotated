@@ -24,8 +24,7 @@ char* sbrk(int);
 int sleep(int);
 int uptime(void);
 int hello(void);
-int lseek(void);
->>>>>>> lseek_syscall
+int lseek(int fd, int offset, int whence);
 
 // ulib.c
 int stat(const char*, struct stat*);

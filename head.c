@@ -21,7 +21,7 @@ int readline(int fd, char *line)
 		n++;
 	}
 	*ptr = '\0';
-	return ++n;
+	return n;
 }
 
 int head(int argvalue, char flag, char *filename)
