@@ -43,14 +43,16 @@ bootmain(void)
 
   // Call the entry point from the ELF header.
   // Does not return!
-//  entry = (void(*)(void))(elf->entry);
-  //entry();
-  
-  asm  (
-	"jmp *%[location]\n"
-	:
-	: [location] "r" (elf->entry)
+  // entry = (void(*)(void))(elf->entry);
+  // entry();
+
+  // ALTERNATIVELY, if i want to use assembly itself!
+  asm(
+  	"jmp *%[location] \n"
+  	:
+  	: [location] "r" (elf->entry)
   );
+  // ** IMPLEMENTED IN MY VM CODE!!
 }
 
 void

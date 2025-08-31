@@ -1,0 +1,1 @@
+exec: There is no equivalent sycall in xv6 like execv, execvp etc... it functions exactly like execl in linux

@@ -16,7 +16,7 @@ alltraps:
   movw %ax, %es
 
   # Call trap(tf), where tf=%esp
-  pushl %esp
+  pushl %esp # User stack esp pushed
   call trap
   addl $4, %esp
 
