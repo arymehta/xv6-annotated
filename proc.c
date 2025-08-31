@@ -319,6 +319,42 @@ wait(void)
 //  - swtch to start running that process
 //  - eventually that process transfers control
 //      via swtch back to the scheduler.
+
+/*
+ * ARYAN:
+ *      - switches to P2 from scheduler
+ *      - steps involved:
+ *          -> setting up TSS (so that cpu knows where kstack of new process lies)
+ *          -> saving current scheduler state
+ *          -> switch to stack of new process
+ *          -> return into the kstack of that process
+ *
+ *          NOTE: context switch:
+ *          - scheduler is called only once *directly* to schedule the INIT process
+ *          - otherwise its always callled through sched()
+ *          - sched() -- switches from P1 to scheduler code
+ *          - scheduler() -- picks P2, and switches to that
+ *          - both functions use swtch.S
+ *
+ *
+ *          STEP BY STEP:
+ *          1) P1 is running
+ *          2) timer interrupt
+ *          3) IDT -> change mode from user to kernel -> change ss, esp P1 kstack(from TSS) -> vectors.S ->
+ *          alltraps(sets up trapframe) -> trap()
+ *          4) trap() -> TIMERINTR -> yeild()
+ *          5) yeild() -> swtch(&(p1->context), cpu->sheduler) == switches executing stack from P1 kstack to scheduler
+ *              -> scheduler()
+ *          6) scheduler() selects a process using round robin -> sets up TSS for P2 (switchuvm())
+ *              -> swtch(&(cpu->scheduler), p2->context) == switches to kstack of P2
+ *          7) swtch.
+ *          ret --> pops the EIP --> which was automatically saved by the hardware, FROM P2 kstack
+ *          --> means jumps directly into P2 kstack
+ *
+ *          8) So in this process, in swtch(), P1's context got appropriately saved in P1 kstack, and succesfully jumped to P2
+ *
+ *
+*/
 void
 scheduler(void)
 {
@@ -339,12 +375,20 @@ scheduler(void)
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
+
+
       c->proc = p;
-      switchuvm(p);
+      switchuvm(p); // ARYAN: setting up TSS of current CPU to kstack of P2
       p->state = RUNNING;
 
-      swtch(&(c->scheduler), p->context);
+      swtch(&(c->scheduler), p->context); // ARYAN: switches from scheduler to kstack of P2
+      // ** dosent return here normally
+
+
       switchkvm();
+    // ARYAN: only executes if there was no process scheduled -- sets the pgdir to KERNEL only pgdir
+    // (the contents of this page are copied across page tables of all the user pgdirs, but
+    // kpgdir dosent contain any user process pgdata)
 
       // Process is done running for now.
       // It should have changed its p->state before coming back.
@@ -354,6 +398,14 @@ scheduler(void)
 
   }
 }
+
+/* ARYAN
+ * Q) Why is TSS even needed? Dont we already have proc->kstack to tell us where kstack is?
+ * Ans) User mode process -> interrupt -> neeeds kstack immediately to push and create trapframe
+ * -> BUT struct proc is in kernel space, cannot access from user mode
+ * -> this is why the value is stored before hand while P1 was BEING scheduled(while it was still in kernel mode).
+ * */
+
 
 // Enter scheduler.  Must hold only ptable.lock
 // and have changed proc->state. Saves and restores
@@ -377,6 +429,7 @@ sched(void)
   if(readeflags()&FL_IF)
     panic("sched interruptible");
   intena = mycpu()->intena;
+    // Aryan: switches from P1 kstack to scheduler (no need to setup TSS because it was already setup when P1 got scheduled)
   swtch(&p->context, mycpu()->scheduler);
   mycpu()->intena = intena;
 }
