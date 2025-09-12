@@ -14,6 +14,18 @@
 
 void readseg(uchar*, uint, uint);
 
+/* Aryan
+- At this point, bootloader has been loaded into the RAM and is executing
+- Needs to find the location of the kernel and load it into RAM
+- Now from Makefile, kernel is in sector 1 of virtual disk xv6.img
+- Reads the elf file stored, loads into RAM, finds program header offsets and loads those
+- struct elfhdr {
+    magic : to verify if valid elf
+    uint phoff: offset to the program headers in the elf file
+    entry: first line that should run --> poitns to entry.S file code
+}
+pheader{...} - contains location of different segments of ELF such as code, data, bss, heap etc
+ */
 void
 bootmain(void)
 {
@@ -64,6 +76,9 @@ waitdisk(void)
 }
 
 // Read a single sector at offset into dst.
+/* Aryan
+ Is a driver function, directly communicates with hardware via polling mechanism (waitdisk())
+ */
 void
 readsect(void *dst, uint offset)
 {
@@ -94,7 +109,7 @@ readseg(uchar* pa, uint count, uint offset)
   pa -= offset % SECTSIZE;
 
   // Translate from bytes to sectors; kernel starts at sector 1.
-  offset = (offset / SECTSIZE) + 1;
+  offset = (offset / SECTSIZE) + 1; // Aryan: we add plus 1 because kernel starts from sector 1 , we have passed the sector offset WRT kernel = 0
 
   // If this is too slow, we could read lots of sectors at a time.
   // We'd write more to memory than asked, but it doesn't matter --

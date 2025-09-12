@@ -9,14 +9,14 @@ alltraps:
   pushl %fs
   pushl %gs
   pushal
-  
+
   # Set up data segments.
   movw $(SEG_KDATA<<3), %ax
   movw %ax, %ds
   movw %ax, %es
 
   # Call trap(tf), where tf=%esp
-  pushl %esp # User stack esp pushed
+  pushl %esp # Pointer to trapframe
   call trap
   addl $4, %esp
 

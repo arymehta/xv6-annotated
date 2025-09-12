@@ -42,7 +42,7 @@ walkpgdir(pde_t *pgdir, const void *va, int alloc)
   if(*pde & PTE_P){
     pgtab = (pte_t*)P2V(PTE_ADDR(*pde));
   } else {
-    if(!alloc || (pgtab = (pte_t*)kalloc()) == 0)
+    if(alloc == 0 || (pgtab = (pte_t*)kalloc()) == 0)
       return 0;
     // Make sure all those PTE_P bits are zero.
     memset(pgtab, 0, PGSIZE);
@@ -51,7 +51,7 @@ walkpgdir(pde_t *pgdir, const void *va, int alloc)
     // entries, if necessary.
     *pde = V2P(pgtab) | PTE_P | PTE_W | PTE_U;
   }
-  return &pgtab[PTX(va)];
+  return &pgtab[PTX(va)]; // return address of ENTRY of pgtable @ index PTX(va)
 }
 
 // Create PTEs for virtual addresses starting at va that refer to
@@ -63,8 +63,12 @@ mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm)
   char *a, *last;
   pte_t *pte;
 
-  a = (char*)PGROUNDDOWN((uint)va);
-  last = (char*)PGROUNDDOWN(((uint)va) + size - 1);
+/* Aryan:
+ *      walkpgdir: returns the address of entry where VA is mapped, if not present, creates the entry
+ *      can only fail if kalloc fails()
+ * */
+  a = (char*)PGROUNDDOWN((uint)va); // First  page to be mapped
+  last = (char*)PGROUNDDOWN(((uint)va) + size - 1); // last page to be mapped
   for(;;){
     if((pte = walkpgdir(pgdir, a, 1)) == 0)
       return -1;
@@ -76,6 +80,13 @@ mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm)
     a += PGSIZE;
     pa += PGSIZE;
   }
+    /* Aryan: If want to map multiple pages
+     *      eg: mappages(pgdir, va, 8096, pa, perm) means two pages
+     *      for loop:
+     *          walkpgdir() : check if entry exists at va, if not, create it
+     *          create mapping
+     *          then for subsequent pages, INCREMENT a and pgsize next iteration will map a page to a+PGSIZE to next physical page
+     */
   return 0;
 }
 
@@ -113,11 +124,16 @@ static struct kmap {
  { (void*)data,     V2P(data),     PHYSTOP,   PTE_W}, // kern data+memory
  { (void*)DEVSPACE, DEVSPACE,      0,         PTE_W}, // more devices
 };
+// Aryan: data: same as the data entry in ELF headers, VA: 0x80090000..
 
 // Set up kernel part of a page table.
 pde_t*
 setupkvm(void)
 {
+    /* Aryan
+     * allocate one page from kmem.freelist and assign it to pgdir
+     * typecast run* to char* (byte pointer), so can change individual bytes to 0
+     * */
   pde_t *pgdir;
   struct kmap *k;
 
@@ -127,6 +143,10 @@ setupkvm(void)
   if (P2V(PHYSTOP) > (void*)DEVSPACE)
     panic("PHYSTOP too high");
   for(k = kmap; k < &kmap[NELEM(kmap)]; k++)
+
+    /* Aryan
+     * maps range of virtual addresses from k->virt (then accepts offset), to start addr of physical memory
+     * */
     if(mappages(pgdir, k->virt, k->phys_end - k->phys_start,
                 (uint)k->phys_start, k->perm) < 0) {
       freevm(pgdir);
@@ -149,6 +169,7 @@ kvmalloc(void)
 void
 switchkvm(void)
 {
+    // called when NO PROCESS IS being scheduled in the scheduler
   lcr3(V2P(kpgdir));   // switch to the kernel page table
 }
 

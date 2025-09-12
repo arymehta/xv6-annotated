@@ -36,7 +36,6 @@ multiboot_header:
 
 # By convention, the _start symbol specifies the ELF entry point.
 # Since we haven't set up virtual memory yet, our entry point is
-EXTMEM: 0x100000 = 1MB
 # the physical address of 'entry'.
 .globl _start
 _start = V2P_WO(entry)
