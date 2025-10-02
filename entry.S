@@ -47,7 +47,7 @@ entry:
   movl    %cr4, %eax
   orl     $(CR4_PSE), %eax
   movl    %eax, %cr4
-  # Set page directory
+  # Set page directory Aryan: This is only 1 level page entry, will be REPLACED later
   movl    $(V2P_WO(entrypgdir)), %eax
   movl    %eax, %cr3
   # Turn on paging.
@@ -66,3 +66,23 @@ entry:
   jmp *%eax
 
 .comm stack, KSTACKSIZE
+/* Aryan: now, functioning stack is the 4kb block set by .comm */
+
+
+/* Aryan:
+ * Q) Why are BOTH entries 0 and 512 set?
+ * Ans) 2GB onwards 1MB page is reserved for kernel code and data so need to reserve that
+ *
+ * Why entry 0?
+ *
+ * Because, currently the paging is NOT ACTIVATED
+ * it only activates after line 56 when we move it in CR0
+ *
+ * So CS and IP are still essentially mapping DIRECTLY to physical memory space
+ *
+ * Suppose we do not have 0 entry
+ * How wll stack get setup? How will jump happen? CS and IP are physical, but the transformation is not happening
+ * now that we've enabled paging
+ *
+ * Thus the only reason to have 0 entry is for those 2-3 statements, to enable us to JUMP to the logical space
+ */

@@ -1,6 +1,7 @@
 #include "mmu.h"
 
   # vectors.S sends all traps here.
+  # Aryan: Creates the trapframe -- ESSENTIAL for schedular process, Interrupt handling etc
 .globl alltraps
 alltraps:
   # Build trap frame.
@@ -16,7 +17,7 @@ alltraps:
   movw %ax, %es
 
   # Call trap(tf), where tf=%esp
-  pushl %esp # Pointer to trapframe
+  pushl %esp # Aryan: Pointer to trapframe -- calling convention, pushed in reverse order
   call trap
   addl $4, %esp
 

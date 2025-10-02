@@ -19,7 +19,7 @@ start:
      * hardware interrupts disabled
      * this is done so that bios will not respond to any hardware interrupts like keyboard press, etx
      * Later re enabled in scheduler code of kernel
-     * BIOS set CS to  0 (line 14)
+     * BIOS set CS to  0 and IP to 0x7C00 (line 14)
      */
 
   cli                         # BIOS enabled interrupts; disable
