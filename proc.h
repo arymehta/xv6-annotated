@@ -5,7 +5,7 @@ struct cpu {
   struct taskstate ts;         // Used by x86 to find stack for interrupt
   struct segdesc gdt[NSEGS];   // x86 global descriptor table
   volatile uint started;       // Has the CPU started?
-  int ncli;                    // Depth of pushcli nesting.
+  int ncli;                    // Depth of pushcli nesting. Aryan: keeps track of the number of locks cpu has acquired -- because ncli is only incremented when pushcli happens
   int intena;                  // Were interrupts enabled before pushcli?
   struct proc *proc;           // The process running on this cpu or null
 };

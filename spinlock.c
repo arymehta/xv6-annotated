@@ -13,36 +13,45 @@ void
 initlock(struct spinlock *lk, char *name)
 {
   lk->name = name;
-  lk->locked = 0;
+  lk->locked = 0; // Aryan: initialised to "unlocked" meaning that no process has acquired the lock
   lk->cpu = 0;
 }
 
-// Acquire the lock.
+// Acquire the (spin)lock.
 // Loops (spins) until the lock is acquired.
 // Holding a lock for a long time may cause
 // other CPUs to waste time spinning to acquire it.
+
+// basically void spinlock();
 void
 acquire(struct spinlock *lk)
 {
+  // Aryan: *IMPORTANT: always disable interrups before acquiring spinlock : refer to iderw and ideintr
   pushcli(); // disable interrupts to avoid deadlock.
-  if(holding(lk))
+
+  if(holding(lk)) // Aryan: If some OTHER process on the SAME CPU has taken the lock, it should panic
     panic("acquire");
 
   // The xchg is atomic.
   while(xchg(&lk->locked, 1) != 0)
+        // Aryan: Similar to TestAndSet
+        // Busy wait
+        // If if someone has locked -- then keep looping
+        // Exchanges the values of locked and TRUE basically meaning the lock is taken, and returns the old value of lock
     ;
 
-  // Tell the C compiler and the processor to not move loads or stores
+  // Tell the C compiler and the processor to not move loads or stores (aryan: cpu and compiler have the freedom to move memory instructions sometimes for efficience, this statment prevents that)
   // past this point, to ensure that the critical section's memory
   // references happen after the lock is acquired.
   __sync_synchronize();
 
   // Record info about lock acquisition for debugging.
-  lk->cpu = mycpu();
+  lk->cpu = mycpu(); // Aryan: Noting down which CPU has taken the lock
   getcallerpcs(&lk, lk->pcs);
 }
 
 // Release the lock.
+// BAsically void spinunlock()
 void
 release(struct spinlock *lk)
 {
@@ -63,6 +72,7 @@ release(struct spinlock *lk)
   // This code can't use a C assignment, since it might
   // not be atomic. A real OS would use C atomics here.
   asm volatile("movl $0, %0" : "+m" (lk->locked) : );
+    // Aryan:  moves 0 to locked, in an atomic instruction -- atomic!
 
   popcli();
 }
@@ -78,7 +88,7 @@ getcallerpcs(void *v, uint pcs[])
   for(i = 0; i < 10; i++){
     if(ebp == 0 || ebp < (uint*)KERNBASE || ebp == (uint*)0xffffffff)
       break;
-    pcs[i] = ebp[1];     // saved %eip
+    pcs[i] = ebp[1];     // saved %eip // Aryan: saves the array of stackframes which have acquired the lock -- used for debugging incase of panic
     ebp = (uint*)ebp[0]; // saved %ebp
   }
   for(; i < 10; i++)

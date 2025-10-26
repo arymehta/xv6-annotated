@@ -17,7 +17,7 @@ alltraps:
   movw %ax, %es
 
   # Call trap(tf), where tf=%esp
-  pushl %esp # Aryan: Pointer to trapframe -- calling convention, pushed in reverse order
+  pushl %esp # Aryan: Pointer to trapframe -- calling convention, pushed in reverse order ** USERSPACE STACK **
   call trap
   addl $4, %esp
 

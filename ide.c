@@ -163,6 +163,6 @@ iderw(struct buf *b)
     sleep(b, &idelock);
   }
 
-
+    // aryan: when sched() returns in sleep(), it reacquire original lock so no need for acquire() here
   release(&idelock);
 }

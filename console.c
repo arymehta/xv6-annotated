@@ -116,10 +116,10 @@ panic(char *s)
   cprintf(s);
   cprintf("\n");
   getcallerpcs(&s, pcs);
-  for(i=0; i<10; i++)
+  for(i=0; i<10; i++) // Iterates over the PCS array and prints what all accesses the lock
     cprintf(" %p", pcs[i]);
   panicked = 1; // freeze other CPU
-  for(;;)
+  for(;;) // Aryan: freeze the kernel
     ;
 }
 

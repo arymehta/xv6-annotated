@@ -420,9 +420,9 @@ sched(void)
   int intena;
   struct proc *p = myproc();
 
-  if(!holding(&ptable.lock))
+  if(!holding(&ptable.lock)) // Aryan: sched() expects ptable to be held
     panic("sched ptable.lock");
-  if(mycpu()->ncli != 1)
+  if(mycpu()->ncli != 1) // Aryan: The calling process should hold only 1 spinlock
     panic("sched locks");
   if(p->state == RUNNING)
     panic("sched running");
@@ -441,8 +441,26 @@ yield(void)
   acquire(&ptable.lock);  //DOC: yieldlock
   myproc()->state = RUNNABLE;
   sched();
-  release(&ptable.lock);
+  release(&ptable.lock); // !!! -- Release "spinlock"
 }
+/* Aryan: JOURNEY of ptable.lock:
+ * - Notice that in sleep(), we block the process WHILE holdding the ptable spinlock
+ * - Actually violates the rule, this is a special case because:
+ *
+ * 1) sleep() -> acquires ptable lock, calls sched()
+ * 2) sched() -> calls swtch -> switches to processor kstack -> scheduler()
+ * 3) Here, WHILE ptable is still held, scheduler() -> selects a new process and call swtch()
+ * 4) swtch() -> shed -> switches to P2 kstack
+ * 5) Suppose P2 was blocked because of timer interrupt, means it called yield()
+ * 6) after it returns, from sched(), the line RIGHT after sched is...
+ * release(&ptable.lock)!!
+ *
+ * Basically, the ptable lock acquired from one process P1 is then released after context switch
+ * by another process P2!!
+ *
+ * Note: For init process when CPU starts in scheduler(), acquire lock is already called BEFORE infinite loop
+ * So ensures that the ptable lock is always acquired in scheduler()
+ *
 
 // A fork child's very first scheduling by scheduler()
 // will swtch here.  "Return" to user space.
@@ -467,6 +485,12 @@ forkret(void)
 
 // Atomically release lock and sleep on chan.
 // Reacquires lock when awakened.
+
+/* Aryan:
+ * NOTE: this code actually breaks a v imp rule
+ * "Never block when holding a spinlock"
+ * Here, we acquire the ptable lock -- then we call sched()
+*/
 void
 sleep(void *chan, struct spinlock *lk)
 {
@@ -486,11 +510,11 @@ sleep(void *chan, struct spinlock *lk)
   // so it's okay to release lk.
   if(lk != &ptable.lock){  //DOC: sleeplock0
     acquire(&ptable.lock);  //DOC: sleeplock1
-    release(lk);
+    release(lk); // Aryan: Sleep always releases the lock before blocking -- otherwise other process will have to wait for this one to wakeup
   }
   // Go to sleep.
   p->chan = chan;
-  p->state = SLEEPING;
+  p->state = SLEEPING; // blocks while holding a sleeplock!
 
   sched();
 
@@ -510,8 +534,11 @@ sleep(void *chan, struct spinlock *lk)
 static void
 wakeup1(void *chan)
 {
+    // expects the calling function to have acquired the lock
   struct proc *p;
 
+  // Iterates over the ptable, find the sleeping process that is blocked on that chan
+  // and makes it runnable(wakes it up)
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == SLEEPING && p->chan == chan)
       p->state = RUNNABLE;

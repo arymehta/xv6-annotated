@@ -93,11 +93,13 @@ bget(uint dev, uint blockno)
 }
 
 // Return a locked buf with the contents of the indicated block.
+// Aryan:  buf contains an in-memory COPY of a disk block that can be read / modified in memory
 struct buf*
 bread(uint dev, uint blockno)
 {
   struct buf *b;
 
+  // Aryan: lock acquired in bget() -- bcache lock!
   b = bget(dev, blockno);
   if((b->flags & B_VALID) == 0) {
     iderw(b);
@@ -106,6 +108,7 @@ bread(uint dev, uint blockno)
 }
 
 // Write b's contents to disk.  Must be locked.
+// Aryan: b is in RAM right now, so writes that changed block to disk
 void
 bwrite(struct buf *b)
 {
@@ -120,6 +123,7 @@ bwrite(struct buf *b)
 void
 brelse(struct buf *b)
 {
+  // releases bcache block
   if(!holdingsleep(&b->lock))
     panic("brelse");
 
@@ -136,7 +140,7 @@ brelse(struct buf *b)
     bcache.head.next->prev = b;
     bcache.head.next = b;
   }
-  
+
   release(&bcache.lock);
 }
 //PAGEBREAK!

@@ -19,16 +19,24 @@ initsleeplock(struct sleeplock *lk, char *name)
   lk->pid = 0;
 }
 
+/* Aryan:
+     * - if lock is already taken, call sleep and pass the spinlock, to be released in sleep
+     * - the while loop may cause MULTIPLE process to come out of sleep
+     * - This causes a RACE for the lk->locked
+*/
 void
 acquiresleep(struct sleeplock *lk)
 {
-  acquire(&lk->lk);
+  acquire(&lk->lk); // Aryan: acquiring the spinlock that is protecting the sleeplock, INTERRUPTS DISABLED
   while (lk->locked) {
     sleep(lk, &lk->lk);
+    // Aryan: sleeplocks have interrupts enabled!, if T1 wins race... releases spinlock at the end
+    // if T2 loses race, goes to sleep, sleep calls release() on &lk->lk, meaning enabled again
+    // Therefore never use sleeplock if an interrupt handler requires a lock, only spinlock eg ideintr
   }
   lk->locked = 1;
   lk->pid = myproc()->pid;
-  release(&lk->lk);
+  release(&lk->lk); // aryan: interrupts are enabled again
 }
 
 void
@@ -45,7 +53,7 @@ int
 holdingsleep(struct sleeplock *lk)
 {
   int r;
-  
+
   acquire(&lk->lk);
   r = lk->locked && (lk->pid == myproc()->pid);
   release(&lk->lk);
