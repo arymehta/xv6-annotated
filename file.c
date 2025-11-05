@@ -13,31 +13,92 @@
 struct devsw devsw[NDEV];
 struct {
   struct spinlock lock;
-  struct file file[NFILE];
+  // struct file file[NFILE];
+  struct file *freefilelist;
 } ftable;
 
+
+void
+add_chunks_to_freefilelist()
+{
+    struct file *f;
+    struct file *trav;
+    char *pg;
+
+    pg = kalloc();
+    if(pg == 0)
+    {
+        cprintf("kalloc: error\n");
+        return;
+    }
+
+    int files_per_page = 4096 / sizeof(struct file);
+    cprintf("Files per page %d\n", files_per_page);
+    trav = (struct file *) pg;
+
+    acquire(&ftable.lock);
+    for(int i = 0; i < files_per_page; i++)
+    {
+        f = &(trav[i]);
+        f->type = FD_NONE;
+        f->ref = 0;
+        f->readable = 0;
+        f->writable = 0;
+        f->pipe = 0;
+        f->ip = 0;
+        f->off = 0;
+        f->next = (i == files_per_page - 1) ? ftable.freefilelist : &trav[i + 1];
+    }
+    ftable.freefilelist = &(trav[0]);
+    /*
+    int tot = 0;
+    for(tot = 0, trav = ftable.freefilelist; trav ; tot++) trav = trav->next;
+    cprintf("Total: %d\n", tot);
+    */
+    release(&ftable.lock);
+    return;
+}
 void
 fileinit(void)
 {
-  initlock(&ftable.lock, "ftable");
+    cprintf("in file init\n");
+    initlock(&ftable.lock, "ftable");
+    ftable.freefilelist = 0;
 }
 
 // Allocate a file structure.
 struct file*
 filealloc(void)
 {
-  struct file *f;
+   // cprintf("in file alloc");
+    struct file *f;
+    acquire(&ftable.lock);
 
-  acquire(&ftable.lock);
-  for(f = ftable.file; f < ftable.file + NFILE; f++){
-    if(f->ref == 0){
-      f->ref = 1;
-      release(&ftable.lock);
-      return f;
+    // if there is no current files allocated, add chunks
+    if(ftable.freefilelist == 0)
+    {
+        release(&ftable.lock);
+        add_chunks_to_freefilelist();
+        acquire(&ftable.lock);
     }
-  }
-  release(&ftable.lock);
-  return 0;
+
+    f = ftable.freefilelist;
+    while(f)
+    {
+        if(f->ref == 0)
+        {
+            f->ref = 1;
+            release(&ftable.lock);
+            return f;
+        }
+        f = f->next;
+    }
+
+    // if reaches here, means that there is no free file(all refs are 1)
+    // grow the list and find again
+    add_chunks_to_freefilelist();
+    filealloc();
+    release(&ftable.lock);
 }
 
 // Increment ref count for file f.
