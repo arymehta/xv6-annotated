@@ -382,13 +382,9 @@ scheduler(void)
       p->state = RUNNING;
 
       swtch(&(c->scheduler), p->context); // ARYAN: switches from scheduler to kstack of P2
-      // ** dosent return here normally
 
 
       switchkvm();
-    // ARYAN: only executes if there was no process scheduled -- sets the pgdir to KERNEL only pgdir
-    // (the contents of this page are copied across page tables of all the user pgdirs, but
-    // kpgdir dosent contain any user process pgdata)
 
       // Process is done running for now.
       // It should have changed its p->state before coming back.
@@ -453,14 +449,14 @@ yield(void)
  * 4) swtch() -> shed -> switches to P2 kstack
  * 5) Suppose P2 was blocked because of timer interrupt, means it called yield()
  * 6) after it returns, from sched(), the line RIGHT after sched is...
- * release(&ptable.lock)!!
+ * release(&ptable.lock)! :)
  *
  * Basically, the ptable lock acquired from one process P1 is then released after context switch
- * by another process P2!!
+ * by another process P2!
  *
  * Note: For init process when CPU starts in scheduler(), acquire lock is already called BEFORE infinite loop
  * So ensures that the ptable lock is always acquired in scheduler()
- *
+ */
 
 // A fork child's very first scheduling by scheduler()
 // will swtch here.  "Return" to user space.

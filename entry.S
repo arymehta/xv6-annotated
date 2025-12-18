@@ -68,7 +68,13 @@ entry:
 .comm stack, KSTACKSIZE
 /* Aryan: now, functioning stack is the 4kb block set by .comm */
 
-
+/*
+ * 1) Size extension
+ * 2) Set up entrygdir
+ * 3) Enable paging
+ * 4) Stack setup .comm
+ * 4) jump to main()
+ * */
 /* Aryan:
  * Q) Why are BOTH entries 0 and 512 set?
  * Ans) 2GB onwards 1MB page is reserved for kernel code and data so need to reserve that

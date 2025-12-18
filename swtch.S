@@ -15,7 +15,7 @@
  * */
 .globl swtch
 swtch:
-  movl 4(%esp), %eax // old
+  movl 4(%esp), %eax //  old
   movl 8(%esp), %edx // new
 
   # Save old callee-saved registers

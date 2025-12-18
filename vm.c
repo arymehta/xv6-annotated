@@ -124,7 +124,7 @@ static struct kmap {
  { (void*)data,     V2P(data),     PHYSTOP,   PTE_W}, // kern data+memory
  { (void*)DEVSPACE, DEVSPACE,      0,         PTE_W}, // more devices
 };
-// Aryan: data: same as the data entry in ELF headers, VA: 0x80090000..
+// Aryan: data: same as the data entry in ELF headers, VA: 0x80108000..
 
 // Set up kernel part of a page table.
 pde_t*

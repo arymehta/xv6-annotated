@@ -109,12 +109,12 @@ spin:
  * - essentially disabling segmentation
  * - xv6 has segmentation + paging, but segmentation has no effect, because all segments erfectly overlap
  */
-gdt:
+gdt: #7C60
   SEG_NULLASM                             # null seg
   SEG_ASM(STA_X|STA_R, 0x0, 0xffffffff)   # code seg
   SEG_ASM(STA_W, 0x0, 0xffffffff)         # data seg
 
-gdtdesc:
+gdtdesc: # 7C78
   .word   (gdtdesc - gdt - 1)             # sizeof(gdt) - 1
   .long   gdt                             # address gdt
 /* Aryan: gdtdesc .word part contains last index of table, that is why gdtdesc - gdt (-1)
